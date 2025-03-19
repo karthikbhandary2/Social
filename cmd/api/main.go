@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/karthikbhandary2/social/internal/db"
-	"github.com/karthikbhandary2/social/internal/env"
-	"github.com/karthikbhandary2/social/internal/store"
+	"github.com/karthikbhandary2/Social/internal/db"
+	"github.com/karthikbhandary2/Social/internal/env"
+	"github.com/karthikbhandary2/Social/internal/store"
 )
 
 

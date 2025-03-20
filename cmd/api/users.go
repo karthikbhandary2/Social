@@ -24,36 +24,38 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) usersContextMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		idParam := chi.URLParam(r, "userID")
-		userID, err := strconv.ParseInt(idParam, 10, 64)
-		if err != nil {
-			app.badRequest(w, r, err)
-			return
-		}
-		ctx := r.Context()
-		user, err := app.store.Users.GetByID(ctx, userID)
-		if err != nil {
-			switch {
-			case errors.Is(err, store.ErrNotFound):
-				app.badRequest(w, r, err)
-				return
-			default:
-				app.internalServerError(w, r, err)
-				return
-			}
-		}
-		if user == nil {
-			app.notFound(w, r, errors.New("post not found"))
-			return
-		}
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        idParam := chi.URLParam(r, "userID")
+        log.Printf("userID param: %s", idParam) // Log the userID parameter
 
-		// Log the post details for debugging
-		log.Printf("Post found: %+v", user)
+        userID, err := strconv.ParseInt(idParam, 10, 64)
+        if err != nil {
+            app.badRequest(w, r, err)
+            return
+        }
+        ctx := r.Context()
+        user, err := app.store.Users.GetByID(ctx, userID)
+        if err != nil {
+            switch {
+            case errors.Is(err, store.ErrNotFound):
+                app.badRequest(w, r, err)
+                return
+            default:
+                app.internalServerError(w, r, err)
+                return
+            }
+        }
+        if user == nil {
+            app.notFound(w, r, errors.New("user not found"))
+            return
+        }
 
-		ctx = context.WithValue(ctx, userCtx, user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+        // Log the user details for debugging
+        log.Printf("User found: %+v", user)
+
+        ctx = context.WithValue(ctx, userCtx, user)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
 }
 
 func getUserFromContext(r *http.Request) *store.User {

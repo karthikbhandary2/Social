@@ -12,10 +12,25 @@ import (
 )
 
 type userKey string
+
 const userCtx postKey = "user"
 
+// ShowAccount godoc
+//	@Summary		Fetches a user profile
+//	@Description	Fetches a user profile by ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"User ID"
+//	@Success		200	{object}	store.User
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/accounts/{id} [get]
+
 func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
-	
+
 	user := getUserFromContext(r)
 
 	if err := app.jsonResponse(w, http.StatusOK, user); err != nil {
@@ -71,9 +86,10 @@ func getUserFromContext(r *http.Request) *store.User {
 type FollowUser struct {
 	UserID int64 `json:"user_id"`
 }
+
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	followerUser := getUserFromContext(r)
-	
+
 	var payload FollowUser
 	if err := readJSON(w, r, &payload); err != nil {
 		app.badRequest(w, r, err)
@@ -82,7 +98,7 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 
 	ctx := r.Context()
 	if err := app.store.Followers.Follow(ctx, followerUser.ID, payload.UserID); err != nil {
-		switch err{
+		switch err {
 		case store.ErrConflict:
 			app.conflict(w, r, err)
 			return
@@ -90,7 +106,7 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 			app.internalServerError(w, r, err)
 			return
 		}
-		
+
 	}
 	if err := app.jsonResponse(w, http.StatusNoContent, nil); err != nil {
 		app.internalServerError(w, r, err)

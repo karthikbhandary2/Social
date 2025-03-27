@@ -3,17 +3,40 @@ package main
 import (
 	"log"
 
+	
 	"github.com/karthikbhandary2/Social/internal/db"
 	"github.com/karthikbhandary2/Social/internal/env"
 	"github.com/karthikbhandary2/Social/internal/store"
+	
 )
-
 
 const version = "0.0.1"
 
+//	@title			Social
+//	@description	Docs for Social APIs.
+//	@termsOfService	http://swagger.io/terms/
+
+//	@contact.name	API Support
+//	@contact.url	http://www.swagger.io/support
+//	@contact.email	support@swagger.io
+
+//	@license.name	Apache 2.0
+//	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
+
+//	@BasePath	/v1
+
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							header
+//	@name						Authorization
+//	@description
+
 func main() {
+
+	// programmatically set swagger info
+	
 	cfg := config{
-		addr: env.GetString("ADDR", ":8082"),
+		addr:   env.GetString("ADDR", ":8082"),
+		apiURL: env.GetString("EXTERNAL_URL", "localhost:8082"),
 		db: dbConfig{
 			addr:         env.GetString("DB_ADDR", "postgres://Karthik:1234@localhost/social?sslmode=disable"),
 			maxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),

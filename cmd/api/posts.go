@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -51,7 +50,7 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
-	post := getPostFromContext(r)
+	post := app.getPostFromContext(r)
 
 	if post == nil {
 		app.notFound(w, r, errors.New("post not found in context"))
@@ -77,7 +76,7 @@ type UpdatePostPayload struct {
 }
 
 func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request) {
-	post := getPostFromContext(r)
+	post := app.getPostFromContext(r)
 
 	var payload UpdatePostPayload
 	if err := readJSON(w, r, &payload); err != nil {
@@ -133,19 +132,19 @@ func (app *application) postsContextMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Log the post details for debugging
-		log.Printf("Post found: %+v", post)
+		app.logger.Info("Post found: %+v", post)
 
 		ctx = context.WithValue(ctx, postCtx, post)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func getPostFromContext(r *http.Request) *store.Post {
+func (app *application) getPostFromContext(r *http.Request) *store.Post {
 	post, ok := r.Context().Value(postCtx).(*store.Post)
 	if !ok {
-		log.Println("Post not found in context")
+		app.logger.Info("Post not found in context")
 	} else {
-		log.Printf("Post retrieved from context: %+v", post)
+		app.logger.Info("Post retrieved from context: %+v", post)
 	}
 	return post
 }

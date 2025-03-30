@@ -20,4 +20,8 @@ seed:
 
 .PHONY: gen-docs
 gen-docs:
-	@swag init -g ./api/main.go -d cmd,internal/store,internal/db,internal/env && swag fmt
+	@swag init -g ./main.go -d ./cmd/api,./internal && swag fmt
+
+.PHONY: migrate-force
+migrate-force:
+	@migrate -path $(MIGRATIONS_PATH) -database $(DB_ADDR) force $(ARG)

@@ -1,24 +1,31 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/karthikbhandary2/Social/docs"
+	_ "github.com/karthikbhandary2/Social/docs"
 	"github.com/karthikbhandary2/Social/internal/store"
+	"github.com/swaggo/http-swagger/v2"
+	"go.uber.org/zap"
 )
 
 type application struct {
 	config config
 	store  store.Storage
+	logger *zap.SugaredLogger
 }
 
 type config struct {
-	addr string
-	db   dbConfig
-	env  string
+	addr   string
+	db     dbConfig
+	env    string
+	apiURL string
+	mail   mailConfig
 }
 
 type dbConfig struct {
@@ -28,6 +35,10 @@ type dbConfig struct {
 	maxIdleTime  string
 }
 
+type mailConfig struct {
+    exp time.Duration
+}
+
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 
@@ -35,13 +46,15 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.RequestID)
-
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Route("/v1", func(r chi.Router) {
 		r.Get("/health", app.healthCheckHandler)
 
-		r.Route("/posts", func(r chi.Router){
+		docsURL := fmt.Sprintf("%s/swagger/doc.json", app.config.addr)
+		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsURL)))
+
+		r.Route("/posts", func(r chi.Router) {
 			r.Post("/", app.createPostHandler)
 			r.Route("/{postID}", func(r chi.Router) {
 				r.Use(app.postsContextMiddleware)
@@ -52,6 +65,7 @@ func (app *application) mount() http.Handler {
 			})
 		})
 		r.Route("/users", func(r chi.Router) {
+            r.Put("/activate/{token}", app.activateUserHandler)
 			r.Route("/{userID}", func(r chi.Router) {
 				r.Use(app.usersContextMiddleware)
 				r.Get("/", app.getUserHandler)
@@ -59,15 +73,23 @@ func (app *application) mount() http.Handler {
 				r.Put("/unfollow", app.unfollowUserHandler)
 			})
 			r.Group(func(r chi.Router) {
+				// r.Use(app.usersContextMiddleware)
 				r.Get("/feed", app.getUserFeedHandler)
 			})
+
 		})
+        r.Route("/authentication", func(r chi.Router) {
+            r.Post("/user", app.registerUserHandler)
+        })
 	})
 
 	return r
 }
 
 func (app *application) run(mux http.Handler) error {
+	docs.SwaggerInfo.Version = version
+	docs.SwaggerInfo.Host = app.config.apiURL
+	docs.SwaggerInfo.BasePath = "/v1"
 
 	srv := &http.Server{
 		Addr:         app.config.addr,
@@ -76,6 +98,6 @@ func (app *application) run(mux http.Handler) error {
 		ReadTimeout:  time.Second * 10, // It should be less than writes
 		IdleTimeout:  time.Minute,
 	}
-	log.Printf("Starting server on %s", app.config.addr)
+	app.logger.Infow("server has started", "addr", app.config.addr, "env", app.config.env)
 	return srv.ListenAndServe()
 }

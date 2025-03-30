@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -22,6 +21,19 @@ type CreatePostPayload struct {
 	Tags    []string `json:"tags"`
 }
 
+// CreatePost godoc
+//
+//	@Summary		Create a new post
+//	@Description	Creates a new post with the given details
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		store.Post	true	"Post Details"
+//	@Success		201		{object}	store.Post
+//	@Failure		400		{object}	error
+//	@Failure		500		{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts [post]
 func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request) {
 	var payload CreatePostPayload
 	if err := readJSON(w, r, &payload); err != nil {
@@ -50,8 +62,22 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetPost godoc
+//
+//	@Summary		Fetch a post
+//	@Description	Fetches a post by ID
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Post ID"
+//	@Success		200	{object}	store.Post
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts/{id} [get]
 func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
-	post := getPostFromContext(r)
+	post := app.getPostFromContext(r)
 
 	if post == nil {
 		app.notFound(w, r, errors.New("post not found in context"))
@@ -76,8 +102,22 @@ type UpdatePostPayload struct {
 	Content *string `json:"content" validate:"omitempty,max=1000"`
 }
 
+// GetPost godoc
+//
+//	@Summary		Fetch a post
+//	@Description	Fetches a post by ID
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Post ID"
+//	@Success		200	{object}	store.Post
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts/{id} [get]
 func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request) {
-	post := getPostFromContext(r)
+	post := app.getPostFromContext(r)
 
 	var payload UpdatePostPayload
 	if err := readJSON(w, r, &payload); err != nil {
@@ -133,19 +173,19 @@ func (app *application) postsContextMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Log the post details for debugging
-		log.Printf("Post found: %+v", post)
+		app.logger.Info("Post found: %+v", post)
 
 		ctx = context.WithValue(ctx, postCtx, post)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func getPostFromContext(r *http.Request) *store.Post {
+func (app *application) getPostFromContext(r *http.Request) *store.Post {
 	post, ok := r.Context().Value(postCtx).(*store.Post)
 	if !ok {
-		log.Println("Post not found in context")
+		app.logger.Info("Post not found in context")
 	} else {
-		log.Printf("Post retrieved from context: %+v", post)
+		app.logger.Info("Post retrieved from context: %+v", post)
 	}
 	return post
 }
@@ -160,6 +200,19 @@ func getPostFromContext(r *http.Request) *store.Post {
 // 	return comment
 // }
 
+// DeletePost godoc
+//
+//	@Summary		Delete a post
+//	@Description	Deletes a post by ID
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int		true	"Post ID"
+//	@Success		204	{string}	string	"Post deleted successfully"
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts/{id} [delete]
 func (app *application) deletePostHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "postID")
 	id, err := strconv.ParseInt(idParam, 10, 64)
@@ -187,6 +240,19 @@ type CreateCommentPayload struct {
 	Content string `json:"content" validate:"required,max=1000"`
 }
 
+// CreateComment godoc
+//
+//	@Summary		Create a comment
+//	@Description	Creates a comment for a specific post
+//	@Tags			comments
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		CreateCommentPayload	true	"Comment payload"
+//	@Success		201		{object}	store.Comment
+//	@Failure		400		{object}	error
+//	@Failure		500		{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/comments [post]
 func (app *application) createCommentHandler(w http.ResponseWriter, r *http.Request) {
 	var payload CreateCommentPayload
 	if err := readJSON(w, r, &payload); err != nil {

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -12,11 +11,26 @@ import (
 )
 
 type userKey string
+
 const userCtx postKey = "user"
 
+// GetUser godoc
+//
+//	@Summary		Fetches a user profile
+//	@Description	Fetches a user profile by ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"User ID"
+//	@Success		200	{object}	store.User
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/users/{id} [get]
 func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
-	
-	user := getUserFromContext(r)
+
+	user := app.getUserFromContext(r)
 
 	if err := app.jsonResponse(w, http.StatusOK, user); err != nil {
 		app.internalServerError(w, r, err)
@@ -26,6 +40,8 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 func (app *application) usersContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		idParam := chi.URLParam(r, "userID")
+		app.logger.Info("userID param: %s", idParam) // Log the userID parameter
+
 		userID, err := strconv.ParseInt(idParam, 10, 64)
 		if err != nil {
 			app.badRequest(w, r, err)
@@ -44,24 +60,24 @@ func (app *application) usersContextMiddleware(next http.Handler) http.Handler {
 			}
 		}
 		if user == nil {
-			app.notFound(w, r, errors.New("post not found"))
+			app.notFound(w, r, errors.New("user not found"))
 			return
 		}
 
-		// Log the post details for debugging
-		log.Printf("Post found: %+v", user)
+		// Log the user details for debugging
+		app.logger.Info("User found: %+v", user)
 
 		ctx = context.WithValue(ctx, userCtx, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func getUserFromContext(r *http.Request) *store.User {
+func (app *application) getUserFromContext(r *http.Request) *store.User {
 	user, ok := r.Context().Value(userCtx).(*store.User)
 	if !ok {
-		log.Println("Post not found in context")
+		app.logger.Info("Post not found in context")
 	} else {
-		log.Printf("Post retrieved from context: %+v", user)
+		app.logger.Info("Post retrieved from context: %+v", user)
 	}
 	return user
 }
@@ -69,9 +85,26 @@ func getUserFromContext(r *http.Request) *store.User {
 type FollowUser struct {
 	UserID int64 `json:"user_id"`
 }
+
+// FollowUser godoc
+//
+//	@Summary		Follow a user
+//	@Description	Follow a user by ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int			true	"User ID"
+//	@Param			body	body		FollowUser	true	"Follow User Payload"
+//	@Success		204		{string}	string		"User followed successfully"
+//	@Failure		400		{object}	error
+//	@Failure		404		{object}	error
+//	@Failure		409		{object}	error
+//	@Failure		500		{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/users/{id}/follow [put]
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
-	followerUser := getUserFromContext(r)
-	
+	followerUser := app.getUserFromContext(r)
+
 	var payload FollowUser
 	if err := readJSON(w, r, &payload); err != nil {
 		app.badRequest(w, r, err)
@@ -80,7 +113,7 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 
 	ctx := r.Context()
 	if err := app.store.Followers.Follow(ctx, followerUser.ID, payload.UserID); err != nil {
-		switch err{
+		switch err {
 		case store.ErrConflict:
 			app.conflict(w, r, err)
 			return
@@ -88,15 +121,30 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 			app.internalServerError(w, r, err)
 			return
 		}
-		
+
 	}
 	if err := app.jsonResponse(w, http.StatusNoContent, nil); err != nil {
 		app.internalServerError(w, r, err)
 	}
 }
 
+// UnfollowUser godoc
+//
+//	@Summary		Unfollow a user
+//	@Description	Unfollow a user by ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int			true	"User ID"
+//	@Param			body	body		FollowUser	true	"Unfollow User Payload"
+//	@Success		204		{string}	string		"User unfollowed successfully"
+//	@Failure		400		{object}	error
+//	@Failure		404		{object}	error
+//	@Failure		500		{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/users/{id}/unfollow [put]
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
-	unFolloweduser := getUserFromContext(r)
+	unFolloweduser := app.getUserFromContext(r)
 
 	var payload FollowUser
 	if err := readJSON(w, r, &payload); err != nil {
@@ -109,6 +157,39 @@ func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if err := app.jsonResponse(w, http.StatusNoContent, nil); err != nil {
+		app.internalServerError(w, r, err)
+	}
+}
+
+// ActivateUser godoc
+//
+//	@Summary		Activate a user
+//	@Description	Activate a user by ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			token	path		string	true	"Token"
+//	@Success		204		{string}	string	"User activated successfully"
+//	@Failure		400		{object}	error
+//	@Failure		404		{object}	error
+//	@Failure		500		{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/users/activate/{token} [put]
+func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+
+	err := app.store.Users.Activate(r.Context(), token)
+	if err != nil {
+		switch err {
+		case store.ErrNotFound:
+			app.notFound(w, r, err)
+		default:
+			app.internalServerError(w, r, err)
+		}
+		return
+	}
+
+	if err := app.jsonResponse(w, http.StatusNoContent, ""); err != nil {
 		app.internalServerError(w, r, err)
 	}
 }

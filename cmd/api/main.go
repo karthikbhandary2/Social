@@ -5,6 +5,7 @@ import (
 
 	"github.com/karthikbhandary2/Social/internal/db"
 	"github.com/karthikbhandary2/Social/internal/env"
+	"github.com/karthikbhandary2/Social/internal/mailer"
 	"github.com/karthikbhandary2/Social/internal/store"
 	"go.uber.org/zap"
 )
@@ -32,10 +33,11 @@ const version = "0.0.1"
 func main() {
 
 	// programmatically set swagger info
-	
+
 	cfg := config{
 		addr:   env.GetString("ADDR", ":8082"),
 		apiURL: env.GetString("EXTERNAL_URL", "localhost:8082"),
+		frontendURL: env.GetString("FRONTEND_URL", "http://localhost:4000"),
 		db: dbConfig{
 			addr:         env.GetString("DB_ADDR", "postgres://Karthik:1234@localhost/social?sslmode=disable"),
 			maxOpenConns: env.GetInt("DB_MAX_OPEN_CONNS", 30),
@@ -44,7 +46,11 @@ func main() {
 		},
 		env: env.GetString("ENV", "development"),
 		mail: mailConfig{
-			exp: time.Hour * 24 * 3,
+			exp:       time.Hour * 24 * 3,
+			fromEmail: env.GetString("FROM_EMAIL", ""),
+			sendGrid: sendGridConfig{
+				apiKey: env.GetString("SENDGRID_API_KEY", ""),
+			},
 		},
 	}
 
@@ -62,10 +68,13 @@ func main() {
 	logger.Info("Database connection pool established")
 
 	store := store.NewStorage(db)
+
+	mailer := mailer.NewSendgrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
 	app := &application{
 		config: cfg,
 		store:  store,
 		logger: logger,
+		mailer: mailer,
 	}
 
 	mux := app.mount()

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/karthikbhandary2/Social/docs"
 	_ "github.com/karthikbhandary2/Social/docs"
 	"github.com/karthikbhandary2/Social/internal/mailer"
@@ -50,6 +51,15 @@ type sendGridConfig struct {
 
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, 
+	  }))
 
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)

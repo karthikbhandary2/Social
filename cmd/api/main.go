@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"github.com/karthikbhandary2/Social/internal/auth"
 	"github.com/karthikbhandary2/Social/internal/db"
 	"github.com/karthikbhandary2/Social/internal/env"
 	"github.com/karthikbhandary2/Social/internal/mailer"
@@ -52,6 +53,17 @@ func main() {
 				apiKey: env.GetString("SENDGRID_API_KEY", ""),
 			},
 		},
+		auth: authConfig{
+			basic: basicConfig{
+				user: env.GetString("AUTH_BASIC_USER", "admin"),
+				pass: env.GetString("AUTH_BASIC_PASS", "admin"),
+			},
+			token: tokenConfig{
+				secret: env.GetString("AUTH_TOKEN_SECRET", "example"),
+				exp: time.Hour * 24 * 3,
+				iss: "social",
+			},
+		},
 	}
 
 	//logger
@@ -70,11 +82,15 @@ func main() {
 	store := store.NewStorage(db)
 
 	mailer := mailer.NewSendgrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
+
+	
+	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.token.secret, cfg.auth.token.iss, cfg.auth.token.iss)
 	app := &application{
 		config: cfg,
 		store:  store,
 		logger: logger,
 		mailer: mailer,
+		authenticator: jwtAuthenticator,
 	}
 
 	mux := app.mount()

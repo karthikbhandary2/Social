@@ -82,10 +82,6 @@ func (app *application) getUserFromContext(r *http.Request) *store.User {
 	return user
 }
 
-type FollowUser struct {
-	UserID int64 `json:"user_id"`
-}
-
 // FollowUser godoc
 //
 //	@Summary		Follow a user
@@ -93,26 +89,23 @@ type FollowUser struct {
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		int			true	"User ID"
-//	@Param			body	body		FollowUser	true	"Follow User Payload"
-//	@Success		204		{string}	string		"User followed successfully"
-//	@Failure		400		{object}	error
-//	@Failure		404		{object}	error
-//	@Failure		409		{object}	error
-//	@Failure		500		{object}	error
+//	@Param			id	path		int		true	"User ID"
+//	@Success		204	{string}	string	"User followed successfully"
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		409	{object}	error
+//	@Failure		500	{object}	error
 //	@Security		ApiKeyAuth
 //	@Router			/users/{id}/follow [put]
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	followerUser := app.getUserFromContext(r)
-
-	var payload FollowUser
-	if err := readJSON(w, r, &payload); err != nil {
+	followedID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
+	if err != nil {
 		app.badRequest(w, r, err)
 		return
 	}
-
 	ctx := r.Context()
-	if err := app.store.Followers.Follow(ctx, followerUser.ID, payload.UserID); err != nil {
+	if err := app.store.Followers.Follow(ctx, followerUser.ID, followedID); err != nil {
 		switch err {
 		case store.ErrConflict:
 			app.conflict(w, r, err)
@@ -135,24 +128,22 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
-//	@Param			id		path		int			true	"User ID"
-//	@Param			body	body		FollowUser	true	"Unfollow User Payload"
-//	@Success		204		{string}	string		"User unfollowed successfully"
-//	@Failure		400		{object}	error
-//	@Failure		404		{object}	error
-//	@Failure		500		{object}	error
+//	@Param			id	path		int		true	"User ID"
+//	@Success		204	{string}	string	"User unfollowed successfully"
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
 //	@Security		ApiKeyAuth
 //	@Router			/users/{id}/unfollow [put]
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	unFolloweduser := app.getUserFromContext(r)
-
-	var payload FollowUser
-	if err := readJSON(w, r, &payload); err != nil {
+	unFollowedID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
+	if err != nil {
 		app.badRequest(w, r, err)
 		return
 	}
 	ctx := r.Context()
-	if err := app.store.Followers.Unfollow(ctx, unFolloweduser.ID, payload.UserID); err != nil {
+	if err := app.store.Followers.Unfollow(ctx, unFolloweduser.ID, unFollowedID); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}

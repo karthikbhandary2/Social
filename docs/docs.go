@@ -26,7 +26,7 @@ const docTemplate = `{
     "paths": {
         "/authentication/token": {
             "post": {
-                "description": "Authenticates a user with email and password and generates a JWT token",
+                "description": "Creates a token for a user",
                 "consumes": [
                     "application/json"
                 ],
@@ -36,7 +36,7 @@ const docTemplate = `{
                 "tags": [
                     "authentication"
                 ],
-                "summary": "Generates a token for a user",
+                "summary": "Creates a token",
                 "parameters": [
                     {
                         "description": "User credentials",
@@ -49,14 +49,14 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "JWT token generated successfully",
+                    "200": {
+                        "description": "Token",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "Bad Request",
                         "schema": {}
                     },
                     "401": {
@@ -64,7 +64,7 @@ const docTemplate = `{
                         "schema": {}
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {}
                     }
                 }
@@ -72,7 +72,7 @@ const docTemplate = `{
         },
         "/authentication/user": {
             "post": {
-                "description": "Registers a new user with the provided credentials",
+                "description": "Registers a user",
                 "consumes": [
                     "application/json"
                 ],
@@ -96,17 +96,17 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "User registered successfully",
+                        "description": "User registered",
                         "schema": {
                             "$ref": "#/definitions/main.UserWithToken"
                         }
                     },
                     "400": {
-                        "description": "Bad request",
+                        "description": "Bad Request",
                         "schema": {}
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {}
                     }
                 }
@@ -189,7 +189,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Creates a new post with the given details",
+                "description": "Creates a post",
                 "consumes": [
                     "application/json"
                 ],
@@ -199,15 +199,15 @@ const docTemplate = `{
                 "tags": [
                     "posts"
                 ],
-                "summary": "Create a new post",
+                "summary": "Creates a post",
                 "parameters": [
                     {
-                        "description": "Post Details",
-                        "name": "body",
+                        "description": "Post payload",
+                        "name": "payload",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/store.Post"
+                            "$ref": "#/definitions/main.CreatePostPayload"
                         }
                     }
                 ],
@@ -220,6 +220,10 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {}
                     },
                     "500": {
@@ -319,6 +323,66 @@ const docTemplate = `{
                         "schema": {}
                     }
                 }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Updates a post by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Updates a post",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Post ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Post payload",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.UpdatePostPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/store.Post"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
             }
         },
         "/users/activate/{token}": {
@@ -328,21 +392,18 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Activate a user by ID",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Activates/Register a user by invitation token",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "users"
                 ],
-                "summary": "Activate a user",
+                "summary": "Activates/Register a user",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Token",
+                        "description": "Invitation token",
                         "name": "token",
                         "in": "path",
                         "required": true
@@ -350,14 +411,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "204": {
-                        "description": "User activated successfully",
+                        "description": "User activated",
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {}
                     },
                     "404": {
                         "description": "Not Found",
@@ -502,14 +559,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/{id}/follow": {
+        "/users/{userID}/follow": {
             "put": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Follow a user by ID",
+                "description": "Follows a user by ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -519,43 +576,35 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Follow a user",
+                "summary": "Follows a user",
                 "parameters": [
                     {
                         "type": "integer",
                         "description": "User ID",
-                        "name": "id",
+                        "name": "userID",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "User followed successfully",
+                        "description": "User followed",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "User payload missing",
                         "schema": {}
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {}
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {}
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "User not found",
                         "schema": {}
                     }
                 }
             }
         },
-        "/users/{id}/unfollow": {
+        "/users/{userID}/unfollow": {
             "put": {
                 "security": [
                     {
@@ -577,28 +626,24 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "User ID",
-                        "name": "id",
+                        "name": "userID",
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "User unfollowed successfully",
+                        "description": "User unfollowed",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "User payload missing",
                         "schema": {}
                     },
                     "404": {
-                        "description": "Not Found",
-                        "schema": {}
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                        "description": "User not found",
                         "schema": {}
                     }
                 }
@@ -621,6 +666,31 @@ const docTemplate = `{
                 }
             }
         },
+        "main.CreatePostPayload": {
+            "type": "object",
+            "required": [
+                "content",
+                "title"
+            ],
+            "properties": {
+                "content": {
+                    "description": "we are using the validate tag to validate the input to have Content for a post",
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "description": "we are using the validate tag to validate the input to have a title for a post",
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
         "main.CreateUserTokenPayload": {
             "type": "object",
             "required": [
@@ -630,11 +700,11 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string",
-                    "maxLength": 100
+                    "maxLength": 255
                 },
                 "password": {
                     "type": "string",
-                    "maxLength": 100,
+                    "maxLength": 72,
                     "minLength": 3
                 }
             }
@@ -649,11 +719,11 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string",
-                    "maxLength": 100
+                    "maxLength": 255
                 },
                 "password": {
                     "type": "string",
-                    "maxLength": 100,
+                    "maxLength": 72,
                     "minLength": 3
                 },
                 "username": {
@@ -662,12 +732,22 @@ const docTemplate = `{
                 }
             }
         },
+        "main.UpdatePostPayload": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
         "main.UserWithToken": {
             "type": "object",
             "properties": {
-                "_": {
-                    "$ref": "#/definitions/store.Password"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -679,6 +759,12 @@ const docTemplate = `{
                 },
                 "is_active": {
                     "type": "boolean"
+                },
+                "role": {
+                    "$ref": "#/definitions/store.Role"
+                },
+                "role_id": {
+                    "type": "integer"
                 },
                 "token": {
                     "type": "string"
@@ -710,9 +796,6 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
-        },
-        "store.Password": {
-            "type": "object"
         },
         "store.Post": {
             "type": "object",
@@ -799,12 +882,26 @@ const docTemplate = `{
                 }
             }
         },
+        "store.Role": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "store.User": {
             "type": "object",
             "properties": {
-                "_": {
-                    "$ref": "#/definitions/store.Password"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -816,6 +913,12 @@ const docTemplate = `{
                 },
                 "is_active": {
                     "type": "boolean"
+                },
+                "role": {
+                    "$ref": "#/definitions/store.Role"
+                },
+                "role_id": {
+                    "type": "integer"
                 },
                 "username": {
                     "type": "string"

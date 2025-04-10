@@ -51,13 +51,17 @@ func (s *PostStore) Create(ctx context.Context, post *Post) error {
 
 func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 	query := `
-			SELECT id, user_id, title, content, created_at, updated_at, tags, version
-			FROM posts
-			WHERE id = $1`
+        SELECT 
+            p.id, p.user_id, p.title, p.content, p.created_at, p.updated_at, p.tags, p.version,
+            u.username, u.email, u.created_at
+        FROM posts p
+        LEFT JOIN users u ON p.user_id = u.id
+        WHERE p.id = $1`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 	var post Post
+	post.User = User{} // Initialize the User struct before scanning
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&post.ID,
 		&post.UserID,
@@ -66,7 +70,10 @@ func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 		&post.CreatedAt,
 		&post.UpdatedAt,
 		pq.Array(&post.Tags),
-		&post.Version)
+		&post.Version,
+		&post.User.Username,
+		&post.User.Email,
+		&post.User.CreatedAt)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):

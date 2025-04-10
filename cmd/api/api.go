@@ -13,6 +13,7 @@ import (
 	"github.com/karthikbhandary2/Social/internal/auth"
 	"github.com/karthikbhandary2/Social/internal/mailer"
 	"github.com/karthikbhandary2/Social/internal/store"
+	"github.com/karthikbhandary2/Social/internal/store/cache"
 	"github.com/swaggo/http-swagger/v2"
 	"go.uber.org/zap"
 )
@@ -20,6 +21,7 @@ import (
 type application struct {
 	config        config
 	store         store.Storage
+	cacheStorage  cache.Storage
 	logger        *zap.SugaredLogger
 	mailer        mailer.Client
 	authenticator auth.Authenticator
@@ -33,6 +35,14 @@ type config struct {
 	mail        mailConfig
 	frontendURL string
 	auth        authConfig
+	redisCfg    redisConfig
+}
+
+type redisConfig struct {
+	addr    string
+	pw      string
+	db      int
+	enabled bool
 }
 
 type authConfig struct {
@@ -98,8 +108,8 @@ func (app *application) mount() http.Handler {
 			r.Route("/{postID}", func(r chi.Router) {
 				r.Use(app.postsContextMiddleware)
 				r.Get("/", app.getPostHandler)
-				r.Patch("/", app.updatePostHandler)
-				r.Delete("/", app.deletePostHandler)
+				r.Patch("/", app.checkPostOwnership("moderator", app.updatePostHandler))
+				r.Delete("/", app.checkPostOwnership("admin", app.deletePostHandler))
 				r.Post("/comment", app.createCommentHandler)
 			})
 		})

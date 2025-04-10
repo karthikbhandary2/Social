@@ -23,40 +23,41 @@ type CreatePostPayload struct {
 
 // CreatePost godoc
 //
-//	@Summary		Create a new post
-//	@Description	Creates a new post with the given details
+//	@Summary		Creates a post
+//	@Description	Creates a post
 //	@Tags			posts
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		store.Post	true	"Post Details"
+//	@Param			payload	body		CreatePostPayload	true	"Post payload"
 //	@Success		201		{object}	store.Post
 //	@Failure		400		{object}	error
+//	@Failure		401		{object}	error
 //	@Failure		500		{object}	error
 //	@Security		ApiKeyAuth
 //	@Router			/posts [post]
 func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request) {
-
 	var payload CreatePostPayload
 	if err := readJSON(w, r, &payload); err != nil {
 		app.badRequest(w, r, err)
 		return
 	}
+
 	if err := Validate.Struct(payload); err != nil {
 		app.badRequest(w, r, err)
 		return
 	}
 
-	user := app.getUserFromContext(r)
-
+	user := getUserFromContext(r)
 
 	post := &store.Post{
 		Title:   payload.Title,
 		Content: payload.Content,
 		Tags:    payload.Tags,
 		UserID:  user.ID,
-		
 	}
+
 	ctx := r.Context()
+
 	if err := app.store.Posts.Create(ctx, post); err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -108,20 +109,22 @@ type UpdatePostPayload struct {
 	Content *string `json:"content" validate:"omitempty,max=1000"`
 }
 
-// GetPost godoc
+// UpdatePost godoc
 //
-//	@Summary		Fetch a post
-//	@Description	Fetches a post by ID
+//	@Summary		Updates a post
+//	@Description	Updates a post by ID
 //	@Tags			posts
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path		int	true	"Post ID"
-//	@Success		200	{object}	store.Post
-//	@Failure		400	{object}	error
-//	@Failure		404	{object}	error
-//	@Failure		500	{object}	error
+//	@Param			id		path		int					true	"Post ID"
+//	@Param			payload	body		UpdatePostPayload	true	"Post payload"
+//	@Success		200		{object}	store.Post
+//	@Failure		400		{object}	error
+//	@Failure		401		{object}	error
+//	@Failure		404		{object}	error
+//	@Failure		500		{object}	error
 //	@Security		ApiKeyAuth
-//	@Router			/posts/{id} [get]
+//	@Router			/posts/{id} [patch]
 func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request) {
 	post := app.getPostFromContext(r)
 

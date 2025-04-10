@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("resource not found")
-	ErrConflict = errors.New("resource already exists")
+	ErrNotFound          = errors.New("resource not found")
+	ErrConflict          = errors.New("resource already exists")
 	QueryTimeoutDuration = time.Second * 5
-	ErrDuplicateEmail = errors.New("duplicate email")
+	ErrDuplicateEmail    = errors.New("duplicate email")
 	ErrDuplicateUsername = errors.New("duplicate username")
 )
 
@@ -26,7 +26,7 @@ type Storage struct {
 
 	Users interface {
 		Create(context.Context, *sql.Tx, *User) error
-		GetByID(context.Context, int64) (*User,error)
+		GetByID(context.Context, int64) (*User, error)
 		CreateAndInvite(context.Context, *User, string, time.Duration) error
 		Activate(context.Context, string) error
 		Delete(context.Context, int64) error
@@ -41,14 +41,18 @@ type Storage struct {
 		Follow(ctx context.Context, followerID, userID int64) error
 		Unfollow(ctx context.Context, followerID, userID int64) error
 	}
+	Roles interface {
+		GetByName(context.Context, string) (*Role, error)
+	}
 }
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Posts: &PostStore{db},
-		Users: &UserStore{db},
-		Comments: &CommentStore{db},
+		Posts:     &PostStore{db},
+		Users:     &UserStore{db},
+		Comments:  &CommentStore{db},
 		Followers: &FollowerStore{db},
+		Roles:     &RoleStore{db},
 	}
 }
 

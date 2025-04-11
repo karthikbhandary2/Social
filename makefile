@@ -25,3 +25,7 @@ gen-docs:
 .PHONY: migrate-force
 migrate-force:
 	@migrate -path $(MIGRATIONS_PATH) -database $(DB_ADDR) force $(ARG)
+
+.PHONY: test
+test:
+	@go test -v ./...

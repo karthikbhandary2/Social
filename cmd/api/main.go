@@ -8,6 +8,7 @@ import (
 	"github.com/karthikbhandary2/Social/internal/db"
 	"github.com/karthikbhandary2/Social/internal/env"
 	"github.com/karthikbhandary2/Social/internal/mailer"
+	"github.com/karthikbhandary2/Social/internal/ratelimiter"
 	"github.com/karthikbhandary2/Social/internal/store"
 	"github.com/karthikbhandary2/Social/internal/store/cache"
 	"go.uber.org/zap"
@@ -72,6 +73,11 @@ func main() {
 				iss:    "social",
 			},
 		},
+		rateLimiter: ratelimiter.Config{
+			RequestsPerTimeFrame: env.GetInt("RATELIMITER_REQUESTS_COUNT", 20),
+			TimeFrame:            time.Second * 5,
+			Enabled:              env.GetBool("RATE_LIMITER_ENABLED", true),
+		},
 	}
 
 	//logger
@@ -93,6 +99,13 @@ func main() {
 		rdb = cache.NewRedisClient(cfg.redisCfg.addr, cfg.redisCfg.pw, cfg.redisCfg.db)
 		logger.Info("Redis connection pool established")
 	}
+
+	//ratelimiter
+	rateLimiter := ratelimiter.NewFixedWindowLimiter(
+		cfg.rateLimiter.RequestsPerTimeFrame,
+		cfg.rateLimiter.TimeFrame,
+	)
+
 	store := store.NewStorage(db)
 	cacheStorage := cache.NewRedisStorage(rdb)
 	mailer := mailer.NewSendgrid(cfg.mail.sendGrid.apiKey, cfg.mail.fromEmail)
@@ -105,6 +118,7 @@ func main() {
 		logger:        logger,
 		mailer:        mailer,
 		authenticator: jwtAuthenticator,
+		rateLimiter:   rateLimiter,
 	}
 
 	mux := app.mount()

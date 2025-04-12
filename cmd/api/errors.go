@@ -39,3 +39,11 @@ func (app *application) notFound(w http.ResponseWriter, r *http.Request, err err
 	app.logger.Warnf("not found error", "method", r.Method,"path", r.URL.Path,"error",err)
 	writeJSON(w, http.StatusNotFound, err.Error())
 }
+
+func (app *application) rateLimitExceeded(w http.ResponseWriter, r *http.Request, retryAfter string) {
+	app.logger.Warnw("rate limit exceeded", "method", r.Method, "path", r.URL.Path)
+
+	w.Header().Set("Retry-After", retryAfter)
+
+	writeJSONError(w, http.StatusTooManyRequests, "rate limit exceeded, retry after: "+retryAfter)
+}

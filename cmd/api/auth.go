@@ -10,8 +10,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/karthikbhandary2/Social/internal/store"
 	"github.com/karthikbhandary2/Social/internal/mailer"
+	"github.com/karthikbhandary2/Social/internal/store"
 )
 
 type RegisterUserPayload struct {

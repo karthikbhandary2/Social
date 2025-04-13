@@ -11,9 +11,9 @@ import (
 )
 
 type postKey string
-type commentKey string
+// type commentKey string
 const postCtx postKey = "post"
-const commentCtx commentKey = "comment"
+// const commentCtx commentKey = "comment"
 
 type CreatePostPayload struct {
 	Title   string   `json:"title" validate:"required,max=100"`    //we are using the validate tag to validate the input to have a title for a post

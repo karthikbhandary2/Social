@@ -51,13 +51,17 @@ func (s *PostStore) Create(ctx context.Context, post *Post) error {
 
 func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 	query := `
-			SELECT id, user_id, title, content, created_at, updated_at, tags, version
-			FROM posts
-			WHERE id = $1`
+        SELECT 
+            p.id, p.user_id, p.title, p.content, p.created_at, p.updated_at, p.tags, p.version,
+            u.username, u.email, u.created_at
+        FROM posts p
+        LEFT JOIN users u ON p.user_id = u.id
+        WHERE p.id = $1`
 
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 	var post Post
+	post.User = User{} // Initialize the User struct before scanning
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&post.ID,
 		&post.UserID,
@@ -66,7 +70,10 @@ func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 		&post.CreatedAt,
 		&post.UpdatedAt,
 		pq.Array(&post.Tags),
-		&post.Version)
+		&post.Version,
+		&post.User.Username,
+		&post.User.Email,
+		&post.User.CreatedAt)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -123,25 +130,29 @@ func (s *PostStore) Delete(ctx context.Context, postID int64) error {
 	return nil
 }
 
-func (s *PostStore) GetUserFeed(ctx context.Context, userID int64) ([]PostWithMetadata, error) {
+func (s *PostStore) GetUserFeed(ctx context.Context, userID int64, fq PaginatedFeedQuery) ([]PostWithMetadata, error) {
 	query := `
-		SELECT p.id, p.user_id, p.title, p.content, p.created_at, p.version, p.tags, u.username,
-		COUNT(c.id) AS comments_count
+		SELECT 
+			p.id, p.user_id, p.title, p.content, p.created_at, p.version, p.tags,
+			u.username,
+			COUNT(c.id) AS comments_count
 		FROM posts p
-		LEFT JOIN comments c
-		ON c.post_id = p.id
-		LEFT JOIN users u
-		ON u.id = p.user_id
-		JOIN followers f
-		ON f.follower_id = p.user_id OR p.user_id = $1
-		WHERE f.user_id = $1 OR p.user_id = $1
+		LEFT JOIN comments c ON c.post_id = p.id
+		LEFT JOIN users u ON p.user_id = u.id
+		JOIN followers f ON f.follower_id = p.user_id OR p.user_id = $1
+		WHERE 
+			f.user_id = $1 AND
+			(p.title ILIKE '%' || $4 || '%' OR p.content ILIKE '%' || $4 || '%') AND
+			(p.tags @> $5 OR $5 = '{}')
 		GROUP BY p.id, u.username
-		ORDER BY p.created_at DESC
+		ORDER BY p.created_at ` + fq.Sort + `
+		LIMIT $2 OFFSET $3
 	`
+
 	ctx, cancel := context.WithTimeout(ctx, QueryTimeoutDuration)
 	defer cancel()
 
-	rows, err := s.db.QueryContext(ctx, query, userID)
+	rows, err := s.db.QueryContext(ctx, query, userID, fq.Limit, fq.Offset, fq.Search, pq.Array(fq.Tags))
 	if err != nil {
 		return nil, err
 	}
@@ -168,5 +179,6 @@ func (s *PostStore) GetUserFeed(ctx context.Context, userID int64) ([]PostWithMe
 
 		feed = append(feed, p)
 	}
+
 	return feed, nil
 }

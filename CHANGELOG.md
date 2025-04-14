@@ -1,4 +1,12 @@
 <a name="unreleased"></a>
+## [1.1.0](https://github.com/karthikbhandary2/Social/compare/v1.0.0...v1.1.0) (2025-04-14)
+
+
+### Features
+
+* update api version automatically ([d891993](https://github.com/karthikbhandary2/Social/commit/d891993172b3e55c73676ccab38bb8147b84bb4a))
+* update api version automatically ([b8a422f](https://github.com/karthikbhandary2/Social/commit/b8a422fcc2db2c16dba003e20f16487f5c170966))
+
 ## [Unreleased]
 
 

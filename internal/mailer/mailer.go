@@ -4,7 +4,7 @@ import "embed"
 
 const (
 	FromName            = "Social"
-	FromEmail           = "socail@kfintech.com"
+	FromEmail           = "socail@social.com"
 	maxRetries          = 3
 	UserWelcomeTemplate = "user_invitation.tmpl"
 )
